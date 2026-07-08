@@ -138,6 +138,26 @@ docker run --rm --network none \
   lemma-dafny-runner array-max /solution /output
 ```
 
+To run the full harness against the built image instead of the host's
+`dafny`/`z3` install, set `LEMMA_DOCKER_IMAGE`:
+
+```sh
+docker build -t lemma-dafny-runner .
+LEMMA_DOCKER_IMAGE=lemma-dafny-runner bin/run-tests.sh
+```
+
+This drives every case through `docker run --rm --network none` with the
+same read-only solution mount as the real contract, so it's testing the
+container artifact itself, not just the underlying scripts.
+
+### CI
+
+`.github/workflows/ci.yml` builds the image and runs
+`LEMMA_DOCKER_IMAGE=... bin/run-tests.sh` against it on every push/PR —
+the GitHub-hosted runner's unrestricted network means the `apt-get install
+z3` layer (untested in this repo's own development sandbox, see below)
+gets properly exercised there.
+
 ## What's NOT yet true (honest limitations)
 
 - **The Dockerfile was not build-tested end-to-end in this development
@@ -147,8 +167,15 @@ docker run --rm --network none \
   exercised inside a container build here). Every command in the
   Dockerfile was validated directly against this same environment's host
   OS (Ubuntu, `apt`, `dotnet tool install`), which is what the Dockerfile
-  mechanically reproduces — but the image itself should be built and
-  smoke-tested in a normal (unrestricted) environment before relying on it.
+  mechanically reproduces. Separately, the `LEMMA_DOCKER_IMAGE` code path
+  in `bin/run-tests.sh` (mounts, `--network none`, argument passing) was
+  smoke-tested against a throwaway image built from the same cached base
+  with a stand-in `run.sh`, so the container-driving plumbing is known
+  good — what's untested here specifically is the `apt-get install z3`
+  build layer. `.github/workflows/ci.yml` now builds the real image and
+  runs the harness against it on GitHub's unrestricted runners, which
+  closes this gap on every push — check that it's green before trusting
+  the image.
 - **No `task_id`/version-3 linking.** Practice-Exercise-style (one exercise
   = a flat list of named checks) is what's implemented; explicitly out of
   scope per the originating spec.

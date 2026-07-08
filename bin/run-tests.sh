@@ -7,6 +7,12 @@
 # bin/run-tests.sh.
 #
 # Requires: python3, dafny, jq.
+#
+# Set LEMMA_DOCKER_IMAGE to an already-built image tag to drive the built
+# container (via `docker run`, honoring the --network none / read-only
+# solution-mount Docker contract) instead of calling bin/run.sh directly
+# against the host's dafny/z3 install. Used by CI to test the actual
+# container artifact, not just the underlying scripts.
 
 set -euo pipefail
 
@@ -28,7 +34,15 @@ run_case() {
   mkdir -p "$sol_dir" "$out_dir"
   cp "$dfy_file" "$sol_dir/$slug.dfy"
 
-  "$repo_root/bin/run.sh" "$slug" "$sol_dir" "$out_dir" >"$case_dir/run.log" 2>&1 || true
+  if [[ -n "${LEMMA_DOCKER_IMAGE:-}" ]]; then
+    docker run --rm --network none \
+      -v "$sol_dir:/solution:ro" \
+      -v "$out_dir:/output" \
+      "$LEMMA_DOCKER_IMAGE" "$slug" /solution /output \
+      >"$case_dir/run.log" 2>&1 || true
+  else
+    "$repo_root/bin/run.sh" "$slug" "$sol_dir" "$out_dir" >"$case_dir/run.log" 2>&1 || true
+  fi
 
   results_file="$out_dir/results.json"
   last_results_file="$results_file"

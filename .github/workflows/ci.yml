@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build test-runner image
+        run: docker build -t lemma-dafny-runner .
+
+      - name: Run harness against the built image
+        run: LEMMA_DOCKER_IMAGE=lemma-dafny-runner bin/run-tests.sh

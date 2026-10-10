@@ -3,7 +3,7 @@
 # Simpler, reproducible path (validated during development): start from the
 # official .NET SDK image, install Z3 from the distro's package manager, and
 # install Dafny itself as a dotnet global tool from NuGet.
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+FROM mcr.microsoft.com/dotnet/sdk:11.0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends z3 python3 \
